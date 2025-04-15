@@ -1,0 +1,6 @@
+@MapeAda_Middleware_HostAddress = http://localhost:5157
+
+GET {{MapeAda_Middleware_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,65 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using MapeAda_Middleware.Abstract;
+using MapeAda_Middleware.Configuration;
+using MapeAda_Middleware.Extensions;
+using MapeAda_Middleware.SharedModels.Users;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using SharpGrip.FluentValidation.AutoValidation.Endpoints.Extensions;
+
+namespace MapeAda_Middleware.Features.LoginUser;
+
+public sealed class LoginUserEndpoint: IEndpoint
+{
+    public void MapEndpoint(WebApplication app)
+    {
+        app.MapPost("/api/auth/login", Handle)
+            .AddFluentValidationAutoValidation();
+    }
+
+    private static async Task<IResult> Handle(
+        [FromBody] LoginUserRequest request,
+        IHttpClientFactory httpClientFactory,
+        IOptions<AuthConfiguration> authOptions)
+    {
+        HttpClient client = httpClientFactory.CreateClient(Constants.BackendHttpClientName);
+        
+        HttpResponseMessage response = await client.GetAsync($"api/users?email={request.Email}");
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return await response.ToProblem();
+        }
+        
+        Usuario user = (await response.Content.ReadFromJsonAsync<Usuario>())!;
+
+        string token = GenerateJwtToken(user, authOptions.Value);
+
+        return Results.Ok(new { Token = token });
+    }
+    
+    private static string GenerateJwtToken(Usuario user, AuthConfiguration authConfiguration)
+    {
+        SymmetricSecurityKey securityKey = new(Encoding.UTF8.GetBytes(authConfiguration.Key));
+        SigningCredentials credentials = new(securityKey, SecurityAlgorithms.HmacSha256);
+
+        List<Claim> claims = [
+            new(Constants.JwtEmailKey, user.Email),
+            new(Constants.JwtNipKey, user.Nip),
+            new(Constants.JwtRolKey, user.Rol.ToString())
+        ];
+
+        JwtSecurityToken token = new JwtSecurityToken(
+            issuer: authConfiguration.Issuer,
+            audience: authConfiguration.Audience,
+            claims: claims,
+            expires: DateTime.Now.AddMinutes(30),
+            signingCredentials: credentials
+        );
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+}

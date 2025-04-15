@@ -1,0 +1,6 @@
+﻿services:
+  mapeada-middleware:
+    image: mapeada-middleware
+    build:
+      context: .
+      dockerfile: Dockerfile
