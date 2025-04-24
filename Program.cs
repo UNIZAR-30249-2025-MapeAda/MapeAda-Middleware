@@ -6,11 +6,13 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using MapeAda_Middleware.Configuration;
 using MapeAda_Middleware.SharedModels.Users;
+using MapeAda_Middleware.Swagger;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using SharpGrip.FluentValidation.AutoValidation.Endpoints.Extensions;
+using SystemTextJsonPatch.Converters;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -46,6 +48,8 @@ builder.Services.AddSwaggerGen(options =>
             Array.Empty<string>()
         }
     });
+    
+    options.DocumentFilter<JsonPatchDocumentFilter>();
 });
 
 builder.Services.AddAuthentication(options =>
@@ -84,6 +88,9 @@ builder.Services.AddHttpClient(Constants.BackendHttpClientName, (serviceProvider
 
     client.BaseAddress = new Uri(backendOptions.BaseUrl);
 });
+
+builder.Services.ConfigureHttpJsonOptions(opts =>
+    opts.SerializerOptions.Converters.Add(new JsonPatchDocumentConverterFactory()));
 
 WebApplication app = builder.Build();
 

@@ -13,13 +13,14 @@ public sealed class CreateUserEndpoint: IEndpoint
     {
         app.MapPost("/api/users", Handle)
             .AddFluentValidationAutoValidation()
+            .Produces<CreateUserRequest>(StatusCodes.Status201Created)
+            .ProducesProblems(StatusCodes.Status400BadRequest, StatusCodes.Status401Unauthorized, StatusCodes.Status403Forbidden, StatusCodes.Status409Conflict, StatusCodes.Status500InternalServerError)
             .RequireAuthorization(Constants.GerenteOnlyPolicyName);
     }
 
     private static async Task<IResult> Handle(
         [FromBody] CreateUserRequest request,
-        IHttpClientFactory httpClientFactory,
-        IOptions<AuthConfiguration> authOptions)
+        IHttpClientFactory httpClientFactory)
     {
         HttpClient client = httpClientFactory.CreateClient(Constants.BackendHttpClientName);
         

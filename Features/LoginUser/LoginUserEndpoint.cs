@@ -1,6 +1,8 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
 using System.Security.Claims;
 using System.Text;
+using ErrorOr;
 using MapeAda_Middleware.Abstract;
 using MapeAda_Middleware.Configuration;
 using MapeAda_Middleware.Extensions;
@@ -17,7 +19,9 @@ public sealed class LoginUserEndpoint: IEndpoint
     public void MapEndpoint(WebApplication app)
     {
         app.MapPost("/api/auth/login", Handle)
-            .AddFluentValidationAutoValidation();
+            .AddFluentValidationAutoValidation()
+            .Produces<LoginUserResponse>()
+            .ProducesProblems(StatusCodes.Status400BadRequest, StatusCodes.Status401Unauthorized, StatusCodes.Status500InternalServerError);
     }
 
     private static async Task<IResult> Handle(
@@ -31,14 +35,16 @@ public sealed class LoginUserEndpoint: IEndpoint
 
         if (!response.IsSuccessStatusCode)
         {
-            return await response.ToProblem();
+            return response.StatusCode < HttpStatusCode.InternalServerError
+                ? Error.Unauthorized("Credenciales inválidas").ToProblem()
+                : await response.ToProblem();
         }
         
         Usuario user = (await response.Content.ReadFromJsonAsync<Usuario>())!;
 
         string token = GenerateJwtToken(user, authOptions.Value);
 
-        return Results.Ok(new { Token = token });
+        return Results.Ok(new LoginUserResponse(token));
     }
     
     private static string GenerateJwtToken(Usuario user, AuthConfiguration authConfiguration)
