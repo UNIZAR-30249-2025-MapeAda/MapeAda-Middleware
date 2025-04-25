@@ -2,7 +2,7 @@ using MapeAda_Middleware.SharedModels.Users;
 
 namespace MapeAda_Middleware.Features.PatchUser;
 
-public sealed class PatchUserRequest
+public class PatchUserRequest
 {
     public PatchUserRequest(Rol rol, Departamento? departamento)
     {

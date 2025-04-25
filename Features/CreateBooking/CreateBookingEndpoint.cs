@@ -1,34 +1,39 @@
-using MapeAda_Middleware.Abstract;
+﻿using MapeAda_Middleware.Abstract;
 using MapeAda_Middleware.Extensions;
+using MapeAda_Middleware.SharedModels.Bookings;
 using Microsoft.AspNetCore.Mvc;
 using SharpGrip.FluentValidation.AutoValidation.Endpoints.Extensions;
 
-namespace MapeAda_Middleware.Features.CreateUser;
+namespace MapeAda_Middleware.Features.CreateBooking;
 
-public class CreateUserEndpoint: IEndpoint
+public class CreateBookingEndpoint : IEndpoint
 {
     public void MapEndpoint(WebApplication app)
     {
-        app.MapPost("/api/users", Handle)
+        app.MapPost("/api/bookings", Handle)
             .AddFluentValidationAutoValidation()
-            .Produces<CreateUserRequest>(StatusCodes.Status201Created)
+            .Produces<CreateBookingRequest>(StatusCodes.Status201Created)
             .ProducesProblems(StatusCodes.Status400BadRequest, StatusCodes.Status401Unauthorized, StatusCodes.Status403Forbidden, StatusCodes.Status409Conflict, StatusCodes.Status500InternalServerError)
-            .RequireAuthorization(Constants.GerenteOnlyPolicyName);
+            .RequireAuthorization();
     }
 
     private static async Task<IResult> Handle(
-        [FromBody] CreateUserRequest request,
+        [FromBody] CreateBookingRequest request,
         IHttpClientFactory httpClientFactory)
     {
         HttpClient client = httpClientFactory.CreateClient(Constants.BackendHttpClientName);
-        
-        HttpResponseMessage response = await client.PostAsJsonAsync("api/users", request);
+
+        // TODO: Añadir nip del usuario
+
+        HttpResponseMessage response = await client.PostAsJsonAsync("api/bookings", request);
 
         if (!response.IsSuccessStatusCode)
         {
             return await response.ToProblem();
         }
-        
-        return Results.Created($"/api/users/{request.Nip}", request);
+
+        Reserva reserva = (await response.Content.ReadFromJsonAsync<Reserva>())!;
+
+        return Results.Created($"/api/bookings/{reserva.Id}", request);
     }
 }

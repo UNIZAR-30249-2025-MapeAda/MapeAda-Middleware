@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using ErrorOr;
 using FluentValidation;
 using FluentValidation.Results;
@@ -10,13 +10,13 @@ using Microsoft.AspNetCore.JsonPatch.Operations;
 using Microsoft.AspNetCore.Mvc;
 using SharpGrip.FluentValidation.AutoValidation.Endpoints.Extensions;
 
-namespace MapeAda_Middleware.Features.PatchUser;
+namespace MapeAda_Middleware.Features.PatchBuilding;
 
-public class PatchUserEndpoint : IEndpoint
+public class PatchBuildingEndpoint : IEndpoint
 {
     public void MapEndpoint(WebApplication app)
     {
-        app.MapPatch("/api/users/{nip}", Handle)
+        app.MapPatch("/api/building/{id}", Handle)
             .AddFluentValidationAutoValidation()
             .RequireAuthorization(Constants.GerenteOnlyPolicyName)
             .Produces<NoContent>(StatusCodes.Status204NoContent)
@@ -24,26 +24,26 @@ public class PatchUserEndpoint : IEndpoint
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status500InternalServerError);
     }
-    
+
     private static async Task<IResult> Handle(
-        [FromRoute] string nip,
-        [FromBody] JsonPatchDocument<PatchUserRequest> patchDoc,
+        [FromRoute] string id,
+        [FromBody] JsonPatchDocument<PatchBuildingRequest> patchDoc,
         IHttpClientFactory httpClientFactory,
-        IValidator<PatchUserRequest> validator)
+        IValidator<PatchBuildingRequest> validator)
     {
         if (!ValidatePatchOperations(patchDoc, out List<string> opErrors))
         {
             return Error.Validation("JsonPatch", string.Join("; ", opErrors)).ToProblem();
         }
-        
-        PatchUserRequest patchRequest = new();
+
+        PatchBuildingRequest patchRequest = new();
         List<JsonPatchError> patchErrors = [];
         patchDoc.ApplyTo(patchRequest, err => patchErrors.Add(err));
         if (patchErrors.Count != 0)
         {
             return Error.Validation("ModelState", string.Join("; ", patchErrors.Select(e => e.ErrorMessage))).ToProblem();
         }
-        
+
         ValidationResult? validation = await validator.ValidateAsync(patchRequest);
         if (!validation.IsValid)
         {
@@ -57,27 +57,27 @@ public class PatchUserEndpoint : IEndpoint
         );
 
         HttpClient client = httpClientFactory.CreateClient(Constants.BackendHttpClientName);
-        HttpResponseMessage response = await client.PatchAsync($"api/users/{nip}", content);
+        HttpResponseMessage response = await client.PatchAsync($"api/building/{id}", content);
 
         if (!response.IsSuccessStatusCode)
         {
             return await response.ToProblem();
         }
-        
+
         return Results.NoContent();
     }
-    
-    private static bool ValidatePatchOperations(JsonPatchDocument<PatchUserRequest> doc, out List<string> errors)
+
+    private static bool ValidatePatchOperations(JsonPatchDocument<PatchBuildingRequest> doc, out List<string> errors)
     {
         errors = [];
-        foreach (Operation<PatchUserRequest>? op in doc.Operations)
+        foreach (Operation<PatchBuildingRequest>? op in doc.Operations)
         {
             string? path = op.path?.ToLowerInvariant();
             string? operation = op.op?.ToLowerInvariant();
 
-            if (path is not ($"/{nameof(PatchUserRequest.Rol)}" or $"/{nameof(PatchUserRequest.Departamento)}") || operation != "replace")
+            if (path is not ($"/{nameof(PatchBuildingRequest.UsoMaximo)}" or $"/{nameof(PatchBuildingRequest.HorariosApertura)}") || operation != "replace")
             {
-                errors.Add($"Operación '{op.op}' no permitida en campo '{op.path}'. Solo 'replace' en 'Rol' y 'Departamento'.");
+                errors.Add($"Operación '{op.op}' no permitida en campo '{op.path}'. Solo 'replace' en 'UsoMaximo' y 'HorariosApertura'.");
             }
         }
         return errors.Count == 0;

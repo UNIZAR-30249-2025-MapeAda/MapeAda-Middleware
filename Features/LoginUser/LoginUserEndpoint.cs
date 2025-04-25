@@ -14,7 +14,7 @@ using SharpGrip.FluentValidation.AutoValidation.Endpoints.Extensions;
 
 namespace MapeAda_Middleware.Features.LoginUser;
 
-public sealed class LoginUserEndpoint: IEndpoint
+public class LoginUserEndpoint: IEndpoint
 {
     public void MapEndpoint(WebApplication app)
     {
