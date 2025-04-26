@@ -16,7 +16,7 @@ public class PatchBuildingEndpoint : IEndpoint
 {
     public void MapEndpoint(WebApplication app)
     {
-        app.MapPatch("/api/building/{id}", Handle)
+        app.MapPatch("/api/building", Handle)
             .AddFluentValidationAutoValidation()
             .RequireAuthorization(Constants.GerenteOnlyPolicyName)
             .Produces<NoContent>(StatusCodes.Status204NoContent)
@@ -26,7 +26,6 @@ public class PatchBuildingEndpoint : IEndpoint
     }
 
     private static async Task<IResult> Handle(
-        [FromRoute] string id,
         [FromBody] JsonPatchDocument<PatchBuildingRequest> patchDoc,
         IHttpClientFactory httpClientFactory,
         IValidator<PatchBuildingRequest> validator)
@@ -57,7 +56,7 @@ public class PatchBuildingEndpoint : IEndpoint
         );
 
         HttpClient client = httpClientFactory.CreateClient(Constants.BackendHttpClientName);
-        HttpResponseMessage response = await client.PatchAsync($"api/building/{id}", content);
+        HttpResponseMessage response = await client.PatchAsync($"api/building", content);
 
         if (!response.IsSuccessStatusCode)
         {
