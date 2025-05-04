@@ -1,6 +1,7 @@
 ﻿using MapeAda_Middleware.Abstract;
 using MapeAda_Middleware.Extensions;
 using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace MapeAda_Middleware.Features.DeleteBooking;
 
@@ -10,12 +11,31 @@ public class DeleteBookingEndpoint : IEndpoint
     {
         app.MapDelete("/api/bookings/{id}", Handle)
             .RequireAuthorization()
-            .Produces(StatusCodes.Status204NoContent)
-            .ProducesProblems(StatusCodes.Status401Unauthorized, StatusCodes.Status403Forbidden, StatusCodes.Status404NotFound, StatusCodes.Status500InternalServerError);
+            .WithMetadata(new SwaggerOperationAttribute("Elimina una reserva existente"))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status204NoContent,
+                "Reserva eliminada exitosamente"))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status401Unauthorized,
+                "Necesitas iniciar sesión",
+                typeof(ProblemDetails)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status403Forbidden,
+                "No tienes permisos suficientes",
+                typeof(ProblemDetails)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status404NotFound,
+                "Reserva no encontrada",
+                typeof(ProblemDetails)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status500InternalServerError,
+                "Error no controlado",
+                typeof(ProblemDetails)))
+            .WithTags("Reservas");
     }
 
     private static async Task<IResult> Handle(
-        [FromRoute] int id,
+        [FromRoute][SwaggerParameter("ID de la reserva a eliminar", Required = true)] int id,
         IHttpClientFactory httpClientFactory)
     {
         HttpClient client = httpClientFactory.CreateClient(Constants.BackendHttpClientName);

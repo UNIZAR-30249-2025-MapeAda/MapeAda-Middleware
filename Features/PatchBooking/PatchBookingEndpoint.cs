@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.JsonPatch.Operations;
 using Microsoft.AspNetCore.Mvc;
 using SharpGrip.FluentValidation.AutoValidation.Endpoints.Extensions;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace MapeAda_Middleware.Features.PatchBooking;
 public class PatchBookingEndpoint : IEndpoint
@@ -18,17 +19,39 @@ public class PatchBookingEndpoint : IEndpoint
         app.MapPatch("/api/bookings/{id}", Handle)
             .AddFluentValidationAutoValidation()
             .RequireAuthorization(Constants.GerenteOnlyPolicyName)
-            .Produces<NoContent>(StatusCodes.Status204NoContent)
-            .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status500InternalServerError);
+            .WithMetadata(new SwaggerOperationAttribute("Modifica una reserva existente"))
+            .Accepts<JsonPatchDocument<PatchBookingRequest>>("application/json-patch+json")
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status204NoContent,
+                "Reserva modificada exitosamente"))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status400BadRequest,
+                "Documentos JSON Patch inválidos o datos de validación erróneos",
+                typeof(ProblemDetails)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status401Unauthorized,
+                "Necesitas iniciar sesión",
+                typeof(ProblemDetails)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status403Forbidden,
+                "No tienes permisos suficientes",
+                typeof(ProblemDetails)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status404NotFound,
+                "Reserva no encontrada",
+                typeof(ProblemDetails)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status500InternalServerError,
+                "Error no controlado",
+                typeof(ProblemDetails)))
+            .WithTags("Reservas");;
     }
 
     private static async Task<IResult> Handle(
-        [FromRoute] int id,
-        [FromBody] JsonPatchDocument<PatchBookingRequest> patchDoc,
+        [FromRoute][SwaggerParameter("ID de la reserva a modificar", Required = true)] int id,
+        [FromBody][SwaggerRequestBody("Documentos JSON Patch para aplicar cambios", Required = true)] JsonPatchDocument<PatchBookingRequest> patchDoc,
         IHttpClientFactory httpClientFactory,
-        IValidator<PatchBookingRequest> validator)
+        [FromServices] IValidator<PatchBookingRequest> validator)
     {
         if (!ValidatePatchOperations(patchDoc, out List<string> opErrors))
         {

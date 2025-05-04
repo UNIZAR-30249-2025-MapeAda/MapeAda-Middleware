@@ -4,11 +4,13 @@ using FluentValidation;
 using FluentValidation.Results;
 using MapeAda_Middleware.Abstract;
 using MapeAda_Middleware.Extensions;
+using MapeAda_Middleware.Features.PatchBooking;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.JsonPatch.Operations;
 using Microsoft.AspNetCore.Mvc;
 using SharpGrip.FluentValidation.AutoValidation.Endpoints.Extensions;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace MapeAda_Middleware.Features.PatchUser;
 
@@ -22,14 +24,44 @@ public class PatchUserEndpoint : IEndpoint
             .Produces<NoContent>(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status500InternalServerError);
+            .ProducesProblem(StatusCodes.Status500InternalServerError)
+            .WithMetadata(new SwaggerOperationAttribute("Modifica un usuario existente"))
+            .Accepts<JsonPatchDocument<PatchBookingRequest>>("application/json-patch+json")
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status204NoContent,
+                "Usuario modificado correctamente"))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status400BadRequest,
+                "Documentos JSON Patch inválidos o datos de validación erróneos",
+                typeof(ProblemDetails)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status401Unauthorized,
+                "Necesitas iniciar sesión",
+                typeof(ProblemDetails)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status403Forbidden,
+                "No tienes permisos suficientes",
+                typeof(ProblemDetails)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status404NotFound,
+                "Usuario no encontrado",
+                typeof(ProblemDetails)))            
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status409Conflict,
+                "Entradas del calendario duplicadas",
+                typeof(ProblemDetails)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status500InternalServerError,
+                "Error no controlado",
+                typeof(ProblemDetails)))
+            .WithTags("Usuarios");
     }
     
     private static async Task<IResult> Handle(
         [FromRoute] string nip,
         [FromBody] JsonPatchDocument<PatchUserRequest> patchDoc,
         IHttpClientFactory httpClientFactory,
-        IValidator<PatchUserRequest> validator)
+        [FromServices] IValidator<PatchUserRequest> validator)
     {
         if (!ValidatePatchOperations(patchDoc, out List<string> opErrors))
         {

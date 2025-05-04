@@ -1,6 +1,8 @@
 ﻿using MapeAda_Middleware.Abstract;
 using MapeAda_Middleware.Extensions;
 using MapeAda_Middleware.SharedModels.Bookings;
+using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace MapeAda_Middleware.Features.GetAllBookings;
 
@@ -10,8 +12,24 @@ public class GetAllBookingsEndpoint : IEndpoint
     {
         app.MapGet("/api/bookings", Handle)
             .RequireAuthorization(Constants.GerenteOnlyPolicyName)
-            .Produces<IEnumerable<Reserva>>(StatusCodes.Status200OK)
-            .ProducesProblems(StatusCodes.Status401Unauthorized, StatusCodes.Status403Forbidden, StatusCodes.Status500InternalServerError);
+            .WithMetadata(new SwaggerOperationAttribute("Obtiene todas las reservas"))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status200OK,
+                "Lista de reservas",
+                typeof(IEnumerable<Reserva>)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status401Unauthorized,
+                "Necesitas iniciar sesión",
+                typeof(ProblemDetails)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status403Forbidden,
+                "No tienes permisos suficientes",
+                typeof(ProblemDetails)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status500InternalServerError,
+                "Error no controlado",
+                typeof(ProblemDetails)))
+            .WithTags("Reservas");
     }
 
     private static async Task<IResult> Handle(

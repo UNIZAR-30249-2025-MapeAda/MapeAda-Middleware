@@ -3,6 +3,7 @@ using MapeAda_Middleware.Extensions;
 using MapeAda_Middleware.SharedModels.Bookings;
 using Microsoft.AspNetCore.Mvc;
 using SharpGrip.FluentValidation.AutoValidation.Endpoints.Extensions;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace MapeAda_Middleware.Features.CreateBooking;
 
@@ -12,13 +13,38 @@ public class CreateBookingEndpoint : IEndpoint
     {
         app.MapPost("/api/bookings", Handle)
             .AddFluentValidationAutoValidation()
-            .Produces<CreateBookingRequest>(StatusCodes.Status201Created)
-            .ProducesProblems(StatusCodes.Status400BadRequest, StatusCodes.Status401Unauthorized, StatusCodes.Status403Forbidden, StatusCodes.Status409Conflict, StatusCodes.Status500InternalServerError)
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .WithMetadata(new SwaggerOperationAttribute("Crea una nueva reserva"))
+            .Accepts<CreateBookingRequest>("application/json")
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status201Created,
+                "Reserva creada",
+                typeof(Reserva)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status400BadRequest,
+                "Datos de reserva inválidos",
+                typeof(ProblemDetails)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status401Unauthorized,
+                "Necesitas iniciar sesión",
+                typeof(ProblemDetails)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status403Forbidden,
+                "No tienes permisos suficientes",
+                typeof(ProblemDetails)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status409Conflict,
+                "La reserva solapa con otra",
+                typeof(ProblemDetails)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status500InternalServerError,
+                "Error no controlado",
+                typeof(ProblemDetails)))
+            .WithTags("Reservas");
     }
 
     private static async Task<IResult> Handle(
-        [FromBody] CreateBookingRequest request,
+        [FromBody][SwaggerRequestBody("Datos para crear la reserva", Required = true)] CreateBookingRequest request,
         IHttpClientFactory httpClientFactory)
     {
         HttpClient client = httpClientFactory.CreateClient(Constants.BackendHttpClientName);

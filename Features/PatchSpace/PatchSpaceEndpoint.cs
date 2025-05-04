@@ -29,7 +29,7 @@ public class PatchSpaceEndpoint : IEndpoint
         [FromRoute] string id,
         [FromBody] JsonPatchDocument<PatchSpaceRequest> patchDoc,
         IHttpClientFactory httpClientFactory,
-        IValidator<PatchSpaceRequest> validator)
+        [FromServices] IValidator<PatchSpaceRequest> validator)
     {
         if (!ValidatePatchOperations(patchDoc, out List<string> opErrors))
         {

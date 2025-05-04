@@ -4,11 +4,13 @@ using FluentValidation;
 using FluentValidation.Results;
 using MapeAda_Middleware.Abstract;
 using MapeAda_Middleware.Extensions;
+using MapeAda_Middleware.Features.PatchBooking;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.JsonPatch.Operations;
 using Microsoft.AspNetCore.Mvc;
 using SharpGrip.FluentValidation.AutoValidation.Endpoints.Extensions;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace MapeAda_Middleware.Features.PatchBuilding;
 
@@ -19,16 +21,34 @@ public class PatchBuildingEndpoint : IEndpoint
         app.MapPatch("/api/building", Handle)
             .AddFluentValidationAutoValidation()
             .RequireAuthorization(Constants.GerenteOnlyPolicyName)
-            .Produces<NoContent>(StatusCodes.Status204NoContent)
-            .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status500InternalServerError);
+            .WithMetadata(new SwaggerOperationAttribute("Modifica la configuración del edificio"))
+            .Accepts<JsonPatchDocument<PatchBuildingRequest>>("application/json-patch+json")
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status204NoContent,
+                "Edificio modificado correctamente"))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status400BadRequest,
+                "Documentos JSON Patch inválidos o datos de validación erróneos",
+                typeof(ProblemDetails)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status401Unauthorized,
+                "Necesitas iniciar sesión",
+                typeof(ProblemDetails)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status403Forbidden,
+                "No tienes permisos suficientes",
+                typeof(ProblemDetails)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status500InternalServerError,
+                "Error no controlado",
+                typeof(ProblemDetails)))
+            .WithTags("Edificio");
     }
 
     private static async Task<IResult> Handle(
         [FromBody] JsonPatchDocument<PatchBuildingRequest> patchDoc,
         IHttpClientFactory httpClientFactory,
-        IValidator<PatchBuildingRequest> validator)
+        [FromServices] IValidator<PatchBuildingRequest> validator)
     {
         if (!ValidatePatchOperations(patchDoc, out List<string> opErrors))
         {

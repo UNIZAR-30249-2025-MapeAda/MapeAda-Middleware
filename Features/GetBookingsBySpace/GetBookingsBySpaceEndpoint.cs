@@ -2,6 +2,7 @@
 using MapeAda_Middleware.Extensions;
 using MapeAda_Middleware.SharedModels.Bookings;
 using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace MapeAda_Middleware.Features.GetBookingsBySpace;
 
@@ -11,12 +12,32 @@ public class GetBookingsBySpaceEndpoint : IEndpoint
     {
         app.MapGet("/api/bookings/space/{id}", Handle)
             .RequireAuthorization()
-            .Produces<IEnumerable<Reserva>>(StatusCodes.Status200OK)
-            .ProducesProblems(StatusCodes.Status401Unauthorized, StatusCodes.Status403Forbidden, StatusCodes.Status500InternalServerError);
+            .WithMetadata(new SwaggerOperationAttribute("Obtiene reservas por espacio"))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status200OK,
+                "Reservas del espacio",
+                typeof(IEnumerable<Reserva>)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status401Unauthorized,
+                "Necesitas iniciar sesión",
+                typeof(ProblemDetails)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status403Forbidden,
+                "No tienes permisos suficientes",
+                typeof(ProblemDetails)))            
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status404NotFound,
+                "Espacio no encontrado",
+                typeof(ProblemDetails)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status500InternalServerError,
+                "Error no controlado",
+                typeof(ProblemDetails)))
+            .WithTags("Reservas");
     }
 
     private static async Task<IResult> Handle(
-        [FromRoute] string id,
+        [FromRoute][SwaggerParameter("Id del espacio", Required = true)] string id,
         IHttpClientFactory httpClientFactory)
     {
         HttpClient client = httpClientFactory.CreateClient(Constants.BackendHttpClientName);

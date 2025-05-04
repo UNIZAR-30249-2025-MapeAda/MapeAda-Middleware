@@ -13,7 +13,6 @@ using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using SharpGrip.FluentValidation.AutoValidation.Endpoints.Extensions;
 using SystemTextJsonPatch.Converters;
-using Microsoft.AspNetCore.Builder;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -46,11 +45,12 @@ builder.Services.AddSwaggerGen(options =>
                     Id = "Bearer"
                 }
             },
-            Array.Empty<string>()
+            []
         }
     });
     
     options.DocumentFilter<JsonPatchDocumentFilter>();
+    options.EnableAnnotations();
 });
 
 builder.Services.AddAuthentication(options =>
