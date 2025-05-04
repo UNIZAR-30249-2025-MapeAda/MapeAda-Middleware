@@ -45,21 +45,21 @@ public class CreateBookingEndpoint : IEndpoint
 
     private static async Task<IResult> Handle(
         [FromBody][SwaggerRequestBody("Datos para crear la reserva", Required = true)] CreateBookingRequest request,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        HttpContext httpContext)
     {
         HttpClient client = httpClientFactory.CreateClient(Constants.BackendHttpClientName);
 
-        // TODO: Añadir nip del usuario
-
-        HttpResponseMessage response = await client.PostAsJsonAsync("api/bookings", request);
+        string nipClaim = httpContext.User.FindFirst(Constants.JwtNipKey)!.Value;
+        HttpResponseMessage response = await client.PostAsJsonAsync("api/bookings", request.ToBackendRequest(nipClaim));
 
         if (!response.IsSuccessStatusCode)
         {
             return await response.ToProblem();
         }
 
-        Reserva reserva = (await response.Content.ReadFromJsonAsync<Reserva>())!;
+        Reserva reserva = await response.Content.ReadFromJsonAsync<Reserva>() ?? throw new InvalidOperationException("Ha ocurrido un error al deserializar el cuerpo de la petición");
 
-        return Results.Created($"/api/bookings/{reserva.Id}", request);
+        return Results.Created($"/api/bookings/{reserva.Id}", reserva);
     }
 }

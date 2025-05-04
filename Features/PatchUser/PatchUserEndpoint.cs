@@ -4,8 +4,6 @@ using FluentValidation;
 using FluentValidation.Results;
 using MapeAda_Middleware.Abstract;
 using MapeAda_Middleware.Extensions;
-using MapeAda_Middleware.Features.PatchBooking;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.JsonPatch.Operations;
 using Microsoft.AspNetCore.Mvc;
@@ -21,12 +19,8 @@ public class PatchUserEndpoint : IEndpoint
         app.MapPatch("/api/users/{nip}", Handle)
             .AddFluentValidationAutoValidation()
             .RequireAuthorization(Constants.GerenteOnlyPolicyName)
-            .Produces<NoContent>(StatusCodes.Status204NoContent)
-            .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status500InternalServerError)
             .WithMetadata(new SwaggerOperationAttribute("Modifica un usuario existente"))
-            .Accepts<JsonPatchDocument<PatchBookingRequest>>("application/json-patch+json")
+            .Accepts<JsonPatchDocument<PatchUserRequest>>("application/json-patch+json")
             .WithMetadata(new SwaggerResponseAttribute(
                 StatusCodes.Status204NoContent,
                 "Usuario modificado correctamente"))
@@ -58,10 +52,10 @@ public class PatchUserEndpoint : IEndpoint
     }
     
     private static async Task<IResult> Handle(
-        [FromRoute] string nip,
-        [FromBody] JsonPatchDocument<PatchUserRequest> patchDoc,
+        [FromRoute][SwaggerParameter("NIP del usuario a modificar", Required = true)] string nip,
+        [FromBody][SwaggerRequestBody("Documentos JSON Patch para aplicar cambios", Required = true)] JsonPatchDocument<PatchUserRequest> patchDoc,
         IHttpClientFactory httpClientFactory,
-        [FromServices] IValidator<PatchUserRequest> validator)
+        IValidator<PatchUserRequest> validator)
     {
         if (!ValidatePatchOperations(patchDoc, out List<string> opErrors))
         {
@@ -102,16 +96,38 @@ public class PatchUserEndpoint : IEndpoint
     private static bool ValidatePatchOperations(JsonPatchDocument<PatchUserRequest> doc, out List<string> errors)
     {
         errors = [];
+
         foreach (Operation<PatchUserRequest>? op in doc.Operations)
         {
-            string? path = op.path?.ToLowerInvariant();
-            string? operation = op.op?.ToLowerInvariant();
-
-            if (path is not ($"/{nameof(PatchUserRequest.Rol)}" or $"/{nameof(PatchUserRequest.Departamento)}") || operation != "replace")
+            if (op.path is null || op.op is null)
             {
-                errors.Add($"Operación '{op.op}' no permitida en campo '{op.path}'. Solo 'replace' en 'Rol' y 'Departamento'.");
+                errors.Add("Operación inválida: 'path' u 'op' es null.");
+                continue;
+            }
+
+            string pathNormalized = op.path.ToLowerInvariant();
+            string opNormalized   = op.op.ToLowerInvariant();
+
+            if (pathNormalized == $"/{nameof(PatchUserRequest.Rol).ToLowerInvariant()}"
+                || pathNormalized == $"/{nameof(PatchUserRequest.Departamento).ToLowerInvariant()}")
+            {
+                if (opNormalized != "replace")
+                {
+                    errors.Add(
+                        $"Operación '{op.op}' no permitida en campo '{op.path}'. " +
+                        "Solo 'replace' en 'Rol' y 'Departamento'."
+                    );
+                }
+            }
+            else
+            {
+                errors.Add(
+                    $"Operación '{op.op}' no permitida en campo '{op.path}'. " +
+                    "Solo 'replace' en 'Rol' y 'Departamento'."
+                );
             }
         }
+
         return errors.Count == 0;
     }
 }

@@ -16,7 +16,7 @@ public class CreateBookingRequestValidator : AbstractValidator<CreateBookingRequ
             .WithMessage("No se permiten espacios duplicados.");
 
         RuleFor(x => x.Uso)
-            .Must(uso => Enum.IsDefined(typeof(TipoUso), uso))
+            .IsInEnum()
             .WithMessage("El tipo de uso no es válido.");
 
         RuleFor(x => x.Asistentes)
@@ -24,7 +24,7 @@ public class CreateBookingRequestValidator : AbstractValidator<CreateBookingRequ
 
         RuleFor(x => x.Periodo)
             .NotNull().WithMessage("El periodo no puede ser nulo.")
-            .SetValidator(new PeriodoRequestValidator());
+            .SetValidator(new PeriodoValidator());
 
         RuleFor(x => x.Observaciones)
             .MaximumLength(500).WithMessage("Las observaciones no pueden exceder los 500 caracteres.")

@@ -49,8 +49,8 @@ public class GetBookingsBySpaceEndpoint : IEndpoint
             return await response.ToProblem();
         }
 
-        IEnumerable<Reserva> bookings = await response.Content.ReadFromJsonAsync<IEnumerable<Reserva>>();
+        IEnumerable<Reserva> bookings = await response.Content.ReadFromJsonAsync<IEnumerable<Reserva>>() ?? throw new InvalidOperationException("Ha ocurrido un error al deserializar el cuerpo de la petición");
 
-        return Results.Ok(bookings!);
+        return Results.Ok(bookings);
     }
 }

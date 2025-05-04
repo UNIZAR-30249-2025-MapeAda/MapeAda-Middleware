@@ -1,11 +1,10 @@
 ﻿using FluentValidation;
-using MapeAda_Middleware.SharedModels.Spaces;
 
-namespace MapeAda_Middleware.Features.PatchSpace;
+namespace MapeAda_Middleware.SharedModels.Spaces;
 
-public class PropietarioRequestValidator : AbstractValidator<PropietarioRequest>
+public class PropietarioValidator : AbstractValidator<Propietario>
 {
-    public PropietarioRequestValidator()
+    public PropietarioValidator()
     {
         RuleFor(p => p.Tipo)
             .Must(uso => Enum.IsDefined(typeof(TipoPropietario), uso))

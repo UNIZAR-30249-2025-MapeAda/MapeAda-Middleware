@@ -1,14 +1,10 @@
 ﻿using System.Net.Http.Headers;
 using ErrorOr;
-using FluentValidation;
-using FluentValidation.Results;
 using MapeAda_Middleware.Abstract;
 using MapeAda_Middleware.Extensions;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.JsonPatch.Operations;
 using Microsoft.AspNetCore.Mvc;
-using SharpGrip.FluentValidation.AutoValidation.Endpoints.Extensions;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace MapeAda_Middleware.Features.PatchBooking;
@@ -17,7 +13,6 @@ public class PatchBookingEndpoint : IEndpoint
     public void MapEndpoint(WebApplication app)
     {
         app.MapPatch("/api/bookings/{id}", Handle)
-            .AddFluentValidationAutoValidation()
             .RequireAuthorization(Constants.GerenteOnlyPolicyName)
             .WithMetadata(new SwaggerOperationAttribute("Modifica una reserva existente"))
             .Accepts<JsonPatchDocument<PatchBookingRequest>>("application/json-patch+json")
@@ -44,14 +39,13 @@ public class PatchBookingEndpoint : IEndpoint
                 StatusCodes.Status500InternalServerError,
                 "Error no controlado",
                 typeof(ProblemDetails)))
-            .WithTags("Reservas");;
+            .WithTags("Reservas");
     }
 
     private static async Task<IResult> Handle(
         [FromRoute][SwaggerParameter("ID de la reserva a modificar", Required = true)] int id,
         [FromBody][SwaggerRequestBody("Documentos JSON Patch para aplicar cambios", Required = true)] JsonPatchDocument<PatchBookingRequest> patchDoc,
-        IHttpClientFactory httpClientFactory,
-        [FromServices] IValidator<PatchBookingRequest> validator)
+        IHttpClientFactory httpClientFactory)
     {
         if (!ValidatePatchOperations(patchDoc, out List<string> opErrors))
         {
@@ -65,14 +59,7 @@ public class PatchBookingEndpoint : IEndpoint
         {
             return Error.Validation("ModelState", string.Join("; ", patchErrors.Select(e => e.ErrorMessage))).ToProblem();
         }
-
-        ValidationResult? validation = await validator.ValidateAsync(patchRequest);
-        if (!validation.IsValid)
-        {
-            IEnumerable<string> messages = validation.Errors.Select(e => e.ErrorMessage);
-            return Error.Validation(string.Join(", ", validation.Errors.Select(e => e.PropertyName)), string.Join("; ", messages)).ToProblem();
-        }
-
+        
         JsonContent content = JsonContent.Create(
             patchDoc,
             mediaType: new MediaTypeHeaderValue("application/json-patch+json")

@@ -1,10 +1,10 @@
 ﻿using FluentValidation;
 
-namespace MapeAda_Middleware.Features.CreateBooking;
+namespace MapeAda_Middleware.SharedModels.Bookings;
 
-public class PeriodoRequestValidator : AbstractValidator<PeriodoRequest>
+public class PeriodoValidator : AbstractValidator<Periodo>
 {
-    public PeriodoRequestValidator()
+    public PeriodoValidator()
     {
         RuleFor(x => x.Inicio)
             .NotEmpty().WithMessage("La fecha de inicio no puede estar vacía.")

@@ -1,6 +1,5 @@
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
-using SystemTextJsonPatch;
 
 namespace MapeAda_Middleware.Swagger;
 
@@ -9,14 +8,14 @@ public class JsonPatchDocumentFilter : IDocumentFilter
     public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
     {
         // 1) Elimina todos los esquemas generados para OperationOf… y JsonPatchDocumentOf…
-        var toRemove = swaggerDoc.Components.Schemas
+        List<string> toRemove = swaggerDoc.Components.Schemas
             .Keys
             .Where(key =>
                 key.StartsWith("Operation") ||
                 key.StartsWith("JsonPatchDocument") ||
                 key.StartsWith("SystemTextJsonPatch")) // para quien use SystemTextJsonPatch
             .ToList();
-        foreach (var key in toRemove)
+        foreach (string key in toRemove)
             swaggerDoc.Components.Schemas.Remove(key);
 
         // 2) Registra un esquema Operation
@@ -42,16 +41,18 @@ public class JsonPatchDocumentFilter : IDocumentFilter
         });
 
         // 4) Reconfigura todos los endpoints PATCH para que usen solo application/json-patch+json
-        foreach (var pathItem in swaggerDoc.Paths.Values)
+        foreach (OpenApiPathItem? pathItem in swaggerDoc.Paths.Values)
         {
-            if (!pathItem.Operations.TryGetValue(OperationType.Patch, out var patchOp) || patchOp.RequestBody == null)
+            if (!pathItem.Operations.TryGetValue(OperationType.Patch, out OpenApiOperation? patchOp) || patchOp.RequestBody == null)
+            {
                 continue;
+            }
 
             // Mantén sólo application/json-patch+json
-            var ctos = patchOp.RequestBody.Content.Keys
+            List<string> ctos = patchOp.RequestBody.Content.Keys
                 .Where(ct => ct != "application/json-patch+json")
                 .ToList();
-            foreach (var ct in ctos)
+            foreach (string ct in ctos)
                 patchOp.RequestBody.Content.Remove(ct);
 
             // Asigna el esquema al body

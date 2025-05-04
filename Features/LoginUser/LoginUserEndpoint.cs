@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using SharpGrip.FluentValidation.AutoValidation.Endpoints.Extensions;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace MapeAda_Middleware.Features.LoginUser;
 
@@ -20,12 +21,30 @@ public class LoginUserEndpoint: IEndpoint
     {
         app.MapPost("/api/auth/login", Handle)
             .AddFluentValidationAutoValidation()
-            .Produces<LoginUserResponse>()
-            .ProducesProblems(StatusCodes.Status400BadRequest, StatusCodes.Status401Unauthorized, StatusCodes.Status500InternalServerError);
+            .WithMetadata(new SwaggerOperationAttribute("Inicia sesión con el email de usuario"))
+            .Accepts<LoginUserRequest>("application/json")
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status200OK,
+                "Iniciar sesión exitosamente"),
+                typeof(LoginUserResponse))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status400BadRequest,
+                "El formato del email es inválido",
+                typeof(ProblemDetails)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status401Unauthorized,
+                "Datos incorrectos",
+                typeof(ProblemDetails)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status500InternalServerError,
+                "Error no controlado",
+                typeof(ProblemDetails)))
+            .WithTags("Auth");
+        
     }
 
     private static async Task<IResult> Handle(
-        [FromBody] LoginUserRequest request,
+        [FromBody][SwaggerRequestBody("Datos para iniciar sesión", Required = true)] LoginUserRequest request,
         IHttpClientFactory httpClientFactory,
         IOptions<AuthConfiguration> authOptions)
     {
@@ -40,7 +59,7 @@ public class LoginUserEndpoint: IEndpoint
                 : await response.ToProblem();
         }
         
-        Usuario user = (await response.Content.ReadFromJsonAsync<Usuario>())!;
+        Usuario user = await response.Content.ReadFromJsonAsync<Usuario>() ?? throw new InvalidOperationException("Ha ocurrido un error al deserializar el cuerpo de la petición");
 
         string token = GenerateJwtToken(user, authOptions.Value);
 

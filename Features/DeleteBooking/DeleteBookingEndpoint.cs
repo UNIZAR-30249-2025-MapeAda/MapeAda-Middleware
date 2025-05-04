@@ -1,5 +1,8 @@
-﻿using MapeAda_Middleware.Abstract;
+﻿using ErrorOr;
+using MapeAda_Middleware.Abstract;
 using MapeAda_Middleware.Extensions;
+using MapeAda_Middleware.SharedModels.Bookings;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -36,10 +39,32 @@ public class DeleteBookingEndpoint : IEndpoint
 
     private static async Task<IResult> Handle(
         [FromRoute][SwaggerParameter("ID de la reserva a eliminar", Required = true)] int id,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        HttpContext httpContext,
+        IAuthorizationService authorizationService)
     {
         HttpClient client = httpClientFactory.CreateClient(Constants.BackendHttpClientName);
+        
+        HttpResponseMessage getBookingresponse = await client.GetAsync($"api/bookings/{id}");
+        if (!getBookingresponse.IsSuccessStatusCode)
+        {
+            return await getBookingresponse.ToProblem();
+        }
+        
+        Reserva reserva = await getBookingresponse.Content.ReadFromJsonAsync<Reserva>() ?? throw new InvalidOperationException("Ha ocurrido un error al deserializar el cuerpo de la petición");
 
+        AuthorizationResult authResult = await authorizationService.AuthorizeAsync(httpContext.User, null, Constants.GerenteOnlyPolicyName);
+        string nipClaim = httpContext.User.FindFirst(Constants.JwtNipKey)!.Value;
+        if (!authResult.Succeeded && nipClaim != reserva.Usuario)
+        {
+            return Error.Forbidden("No puedes eliminar la reserva de otro usuario").ToProblem();
+        }
+
+        if (reserva.DeletedAt != null)
+        {
+            return Error.Conflict("La reserva ya ha sido eliminada").ToProblem();
+        }
+        
         HttpResponseMessage response = await client.DeleteAsync($"api/bookings/{id}");
 
         if (!response.IsSuccessStatusCode)

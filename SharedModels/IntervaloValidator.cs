@@ -1,10 +1,10 @@
 ﻿using FluentValidation;
 
-namespace MapeAda_Middleware.Features.PatchSpace;
+namespace MapeAda_Middleware.SharedModels;
 
-public class IntervaloRequestValidator : AbstractValidator<IntervaloRequest>
+public class IntervaloValidator : AbstractValidator<Intervalo>
 {
-    public IntervaloRequestValidator()
+    public IntervaloValidator()
     {
         RuleFor(x => x.Inicio)
             .NotEmpty().WithMessage("La hora de inicio no puede estar vacía.")
