@@ -16,6 +16,12 @@ using SystemTextJsonPatch.Converters;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
+    p.AllowAnyOrigin()
+     .AllowAnyHeader()
+     .AllowAnyMethod()
+));
+
 builder.Services.Configure<AuthConfiguration>(builder.Configuration.GetRequiredSection(Constants.AuthConfigurationKey));
 builder.Services.Configure<BackendConfiguration>(builder.Configuration.GetRequiredSection(Constants.BackendConfigurationKey));
 
@@ -131,6 +137,7 @@ else
 }
 
 app.UseHttpsRedirection();
+app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
