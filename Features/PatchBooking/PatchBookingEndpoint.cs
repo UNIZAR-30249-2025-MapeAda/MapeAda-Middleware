@@ -2,6 +2,7 @@
 using ErrorOr;
 using MapeAda_Middleware.Abstract;
 using MapeAda_Middleware.Extensions;
+using MapeAda_Middleware.SharedModels.Bookings;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.JsonPatch.Operations;
 using Microsoft.AspNetCore.Mvc;
@@ -51,7 +52,7 @@ public class PatchBookingEndpoint : IEndpoint
         {
             return Error.Validation("JsonPatch", string.Join("; ", opErrors)).ToProblem();
         }
-
+        
         PatchBookingRequest patchRequest = new();
         List<JsonPatchError> patchErrors = [];
         patchDoc.ApplyTo(patchRequest, err => patchErrors.Add(err));
@@ -66,6 +67,19 @@ public class PatchBookingEndpoint : IEndpoint
         );
 
         HttpClient client = httpClientFactory.CreateClient(Constants.BackendHttpClientName);
+        HttpResponseMessage getBookingresponse = await client.GetAsync($"api/bookings/{id}");
+        if (!getBookingresponse.IsSuccessStatusCode)
+        {
+            return await getBookingresponse.ToProblem();
+        }
+        
+        Reserva reserva = await getBookingresponse.Content.ReadFromJsonAsync<Reserva>() ?? throw new InvalidOperationException("Ha ocurrido un error al deserializar el cuerpo de la petición");
+
+        if (reserva.DeletedAt is not null)
+        {
+            return Error.Conflict("No puedes editar una reserva eliminada").ToProblem();
+        }
+        
         HttpResponseMessage response = await client.PatchAsync($"api/bookings/{id}", content);
 
         if (!response.IsSuccessStatusCode)

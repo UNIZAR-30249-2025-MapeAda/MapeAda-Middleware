@@ -29,10 +29,6 @@ public class CreateBookingEndpoint : IEndpoint
                 "Necesitas iniciar sesión",
                 typeof(ProblemDetails)))
             .WithMetadata(new SwaggerResponseAttribute(
-                StatusCodes.Status403Forbidden,
-                "No tienes permisos suficientes",
-                typeof(ProblemDetails)))
-            .WithMetadata(new SwaggerResponseAttribute(
                 StatusCodes.Status409Conflict,
                 "La reserva solapa con otra",
                 typeof(ProblemDetails)))

@@ -60,7 +60,7 @@ public class DeleteBookingEndpoint : IEndpoint
             return Error.Forbidden("No puedes eliminar la reserva de otro usuario").ToProblem();
         }
 
-        if (reserva.DeletedAt != null)
+        if (reserva.DeletedAt is not null)
         {
             return Error.Conflict("La reserva ya ha sido eliminada").ToProblem();
         }

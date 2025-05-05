@@ -1,25 +1,30 @@
 ﻿using MapeAda_Middleware.Abstract;
 using MapeAda_Middleware.Extensions;
 using MapeAda_Middleware.SharedModels.Bookings;
+using MapeAda_Middleware.SharedModels.Spaces;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace MapeAda_Middleware.Features.GetBookingsBySpace;
+namespace MapeAda_Middleware.Features.GetSpaceById;
 
-public class GetBookingsBySpaceEndpoint : IEndpoint
+public class GetSpaceById : IEndpoint
 {
     public void MapEndpoint(WebApplication app)
     {
-        app.MapGet("/api/bookings/space/{id}", Handle)
-            .RequireAuthorization()
-            .WithMetadata(new SwaggerOperationAttribute("Obtiene reservas por espacio"))
+        app.MapGet("/api/spaces/{id}", Handle)
+            .RequireAuthorization(Constants.GerenteOnlyPolicyName)
+            .WithMetadata(new SwaggerOperationAttribute("Obtiene la reserva por el id"))
             .WithMetadata(new SwaggerResponseAttribute(
                 StatusCodes.Status200OK,
-                "Reservas del espacio",
-                typeof(IEnumerable<Reserva>)))
+                "Espacio por id",
+                typeof(Espacio)))
             .WithMetadata(new SwaggerResponseAttribute(
                 StatusCodes.Status401Unauthorized,
                 "Necesitas iniciar sesión",
+                typeof(ProblemDetails)))
+            .WithMetadata(new SwaggerResponseAttribute(
+                StatusCodes.Status403Forbidden,
+                "No tienes permisos suficientes",
                 typeof(ProblemDetails)))
             .WithMetadata(new SwaggerResponseAttribute(
                 StatusCodes.Status404NotFound,
@@ -29,7 +34,7 @@ public class GetBookingsBySpaceEndpoint : IEndpoint
                 StatusCodes.Status500InternalServerError,
                 "Error no controlado",
                 typeof(ProblemDetails)))
-            .WithTags("Reservas");
+            .WithTags("Espacios");
     }
 
     private static async Task<IResult> Handle(
@@ -38,15 +43,15 @@ public class GetBookingsBySpaceEndpoint : IEndpoint
     {
         HttpClient client = httpClientFactory.CreateClient(Constants.BackendHttpClientName);
 
-        HttpResponseMessage response = await client.GetAsync($"api/bookings/space/{id}");
+        HttpResponseMessage response = await client.GetAsync($"api/spaces/{id}");
 
         if (!response.IsSuccessStatusCode)
         {
             return await response.ToProblem();
         }
 
-        IEnumerable<Reserva> bookings = await response.Content.ReadFromJsonAsync<IEnumerable<Reserva>>() ?? throw new InvalidOperationException("Ha ocurrido un error al deserializar el cuerpo de la petición");
+        Espacio space = await response.Content.ReadFromJsonAsync<Espacio>() ?? throw new InvalidOperationException("Ha ocurrido un error al deserializar el cuerpo de la petición");
 
-        return Results.Ok(bookings);
+        return Results.Ok(space);
     }
 }
