@@ -63,7 +63,7 @@ public class LoginUserEndpoint: IEndpoint
 
         string token = GenerateJwtToken(user, authOptions.Value);
 
-        return Results.Ok(new LoginUserResponse(token));
+        return Results.Ok(new LoginUserResponse(token, user));
     }
     
     private static string GenerateJwtToken(Usuario user, AuthConfiguration authConfiguration)
