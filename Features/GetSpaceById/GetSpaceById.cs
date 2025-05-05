@@ -1,6 +1,5 @@
 ﻿using MapeAda_Middleware.Abstract;
 using MapeAda_Middleware.Extensions;
-using MapeAda_Middleware.SharedModels.Bookings;
 using MapeAda_Middleware.SharedModels.Spaces;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
