@@ -6,6 +6,7 @@ using MapeAda_Middleware.SharedModels.Bookings;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.JsonPatch.Operations;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace MapeAda_Middleware.Features.PatchBooking;
@@ -45,9 +46,38 @@ public class PatchBookingEndpoint : IEndpoint
 
     private static async Task<IResult> Handle(
         [FromRoute][SwaggerParameter("ID de la reserva a modificar", Required = true)] int id,
-        [FromBody][SwaggerRequestBody("Documentos JSON Patch para aplicar cambios", Required = true)] JsonPatchDocument<PatchBookingRequest> patchDoc,
+        HttpContext context,
         IHttpClientFactory httpClientFactory)
     {
+        string? contentType = context.Request.ContentType;
+        if (string.IsNullOrEmpty(contentType) || !contentType.StartsWith("application/json-patch+json", StringComparison.OrdinalIgnoreCase))
+        {
+            return Results.Problem(
+                detail: "El Content-Type debe ser 'application/json-patch+json'.",
+                statusCode: StatusCodes.Status415UnsupportedMediaType);
+        }
+
+        string body;
+        using (StreamReader sr = new StreamReader(context.Request.Body))
+        {
+            body = await sr.ReadToEndAsync();
+        }
+
+        JsonPatchDocument<PatchBookingRequest>? patchDoc;
+        try
+        {
+            patchDoc = JsonConvert.DeserializeObject<JsonPatchDocument<PatchBookingRequest>>(body);
+        }
+        catch (JsonException je)
+        {
+            return Error.Validation("JsonPatch", je.Message).ToProblem();
+        }
+
+        if (patchDoc is null)
+        {
+            return Error.Validation("JsonPatch", "Documento JSON Patch inválido").ToProblem();
+        }
+
         if (!ValidatePatchOperations(patchDoc, out List<string> opErrors))
         {
             return Error.Validation("JsonPatch", string.Join("; ", opErrors)).ToProblem();

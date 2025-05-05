@@ -9,6 +9,7 @@ using MapeAda_Middleware.SharedModels.Building;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.JsonPatch.Operations;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 using SharpGrip.FluentValidation.AutoValidation.Endpoints.Extensions;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -46,14 +47,52 @@ public class PatchBuildingEndpoint : IEndpoint
     }
 
     private static async Task<IResult> Handle(
-        [FromBody][SwaggerRequestBody("Documento JSON Patch para aplicar cambios", Required = true)] JsonPatchDocument<Edificio> patchDoc,
+        HttpContext context,
         IHttpClientFactory httpClientFactory,
         IValidator<Edificio> validator)
     {
+        string? contentType = context.Request.ContentType;
+        if (string.IsNullOrEmpty(contentType) || !contentType.StartsWith("application/json-patch+json", StringComparison.OrdinalIgnoreCase))
+        {
+            return Results.Problem(
+                detail: "El Content-Type debe ser 'application/json-patch+json'.",
+                statusCode: StatusCodes.Status415UnsupportedMediaType);
+        }
+
+        string body;
+        using (StreamReader sr = new StreamReader(context.Request.Body))
+        {
+            body = await sr.ReadToEndAsync();
+        }
+
+        JsonPatchDocument<Edificio>? patchDoc;
+        try
+        {
+            patchDoc = JsonConvert.DeserializeObject<JsonPatchDocument<Edificio>>(body);
+        }
+        catch (JsonException je)
+        {
+            return Error.Validation("JsonPatch", je.Message).ToProblem();
+        }
+
+        if (patchDoc is null)
+        {
+            return Error.Validation("JsonPatch", "Documento JSON Patch inválido").ToProblem();
+        }
+
         if (!ValidatePatchOperations(patchDoc, out List<string> opErrors))
         {
             return Error.Validation("JsonPatch", string.Join("; ", opErrors)).ToProblem();
         }
+
+        string[] propiedades = patchDoc.Operations
+            .Select(op => op.path!)
+            .Distinct()
+            .Select(p => p.TrimStart('/')
+                          .Split('/', StringSplitOptions.RemoveEmptyEntries)[0])
+            .Select(p => char.ToUpperInvariant(p[0]) + p.Substring(1))
+            .Distinct()
+            .ToArray();
 
         Edificio patchRequest = new();
         List<JsonPatchError> patchErrors = [];
@@ -63,11 +102,18 @@ public class PatchBuildingEndpoint : IEndpoint
             return Error.Validation("ModelState", string.Join("; ", patchErrors.Select(e => e.ErrorMessage))).ToProblem();
         }
 
-        ValidationResult? validation = await validator.ValidateAsync(patchRequest);
+        ValidationResult validation = await validator.ValidateAsync(
+            patchRequest,
+            opts => opts.IncludeProperties(propiedades)
+        );
+
         if (!validation.IsValid)
         {
-            IEnumerable<string> messages = validation.Errors.Select(e => e.ErrorMessage);
-            return Error.Validation(string.Join(", ", validation.Errors.Select(e => e.PropertyName)), string.Join("; ", messages)).ToProblem();
+            IEnumerable<string> msgs = validation.Errors.Select(e => e.ErrorMessage);
+            return Error.Validation(
+                string.Join(", ", validation.Errors.Select(e => e.PropertyName)),
+                string.Join("; ", msgs)
+            ).ToProblem();
         }
 
         JsonContent content = JsonContent.Create(
