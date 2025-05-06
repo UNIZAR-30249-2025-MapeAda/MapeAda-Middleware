@@ -65,7 +65,7 @@ public class DeleteBookingEndpoint : IEndpoint
             return Error.Conflict("La reserva ya ha sido eliminada").ToProblem();
         }
         
-        HttpResponseMessage response = await client.DeleteAsync($"api/bookings/{id}");
+        HttpResponseMessage response = await client.DeleteAsync($"api/bookings/{id}?deletedby={nipClaim}");
 
         if (!response.IsSuccessStatusCode)
         {
