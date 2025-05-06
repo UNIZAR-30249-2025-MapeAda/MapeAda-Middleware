@@ -10,4 +10,5 @@ public sealed record Reserva(
     string? Observaciones,
     bool Valida,
     DateTime? InvalidSince,
-    DateTime? DeletedAt);
+    DateTime? DeletedAt,
+    string? DeletedBy);
