@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Text;
 using ErrorOr;
 using FluentValidation;
 using FluentValidation.Results;
@@ -123,11 +124,9 @@ public class PatchUserEndpoint : IEndpoint
                 string.Join("; ", msgs)
             ).ToProblem();
         }
-
-        JsonContent content = JsonContent.Create(
-            patchDoc,
-            mediaType: new MediaTypeHeaderValue("application/json-patch+json")
-        );
+        
+        string payload = JsonConvert.SerializeObject(patchDoc);
+        StringContent content = new(payload, Encoding.UTF8, "application/json-patch+json");
 
         HttpClient client = httpClientFactory.CreateClient(Constants.BackendHttpClientName);
         HttpResponseMessage response = await client.PatchAsync($"api/users/{nip}", content);

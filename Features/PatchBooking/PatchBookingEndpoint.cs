@@ -1,4 +1,5 @@
 ﻿using System.Net.Http.Headers;
+using System.Text;
 using ErrorOr;
 using MapeAda_Middleware.Abstract;
 using MapeAda_Middleware.Extensions;
@@ -90,11 +91,6 @@ public class PatchBookingEndpoint : IEndpoint
         {
             return Error.Validation("ModelState", string.Join("; ", patchErrors.Select(e => e.ErrorMessage))).ToProblem();
         }
-        
-        JsonContent content = JsonContent.Create(
-            patchDoc,
-            mediaType: new MediaTypeHeaderValue("application/json-patch+json")
-        );
 
         HttpClient client = httpClientFactory.CreateClient(Constants.BackendHttpClientName);
         HttpResponseMessage getBookingresponse = await client.GetAsync($"api/bookings/{id}");
@@ -110,6 +106,9 @@ public class PatchBookingEndpoint : IEndpoint
             return Error.Conflict("No puedes editar una reserva eliminada").ToProblem();
         }
         
+        string payload = JsonConvert.SerializeObject(patchDoc);
+        StringContent content = new(payload, Encoding.UTF8, "application/json-patch+json");
+
         HttpResponseMessage response = await client.PatchAsync($"api/bookings/{id}", content);
 
         if (!response.IsSuccessStatusCode)

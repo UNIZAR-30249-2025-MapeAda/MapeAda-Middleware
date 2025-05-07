@@ -1,4 +1,5 @@
 ﻿using System.Net.Http.Headers;
+using System.Text;
 using System.Text.RegularExpressions;
 using ErrorOr;
 using FluentValidation;
@@ -116,10 +117,8 @@ public class PatchBuildingEndpoint : IEndpoint
             ).ToProblem();
         }
 
-        JsonContent content = JsonContent.Create(
-            patchDoc,
-            mediaType: new MediaTypeHeaderValue("application/json-patch+json")
-        );
+        string payload = JsonConvert.SerializeObject(patchDoc);
+        StringContent content = new(payload, Encoding.UTF8, "application/json-patch+json");
 
         HttpClient client = httpClientFactory.CreateClient(Constants.BackendHttpClientName);
         HttpResponseMessage response = await client.PatchAsync("api/building", content);
