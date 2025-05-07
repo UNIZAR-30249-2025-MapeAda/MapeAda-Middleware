@@ -138,7 +138,7 @@ public class PatchBuildingEndpoint : IEndpoint
 
     // /porcentajeUsoMaximo or /porcentajeUsoMaximo/valor
     private static readonly Regex PorcentajeRegex = new(
-        @"^/porcentajousomaximo(?:/valor)?$",
+        @"^/porcentajeusomaximo(?:/valor)?$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     // /calendarioApertura/intervaloPorDefecto or /calendarioApertura/intervaloPorDefecto/inicio|fin
