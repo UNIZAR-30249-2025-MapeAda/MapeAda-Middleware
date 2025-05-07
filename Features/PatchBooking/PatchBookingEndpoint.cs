@@ -127,7 +127,7 @@ public class PatchBookingEndpoint : IEndpoint
             string? path = op.path?.ToLowerInvariant();
             string? operation = op.op?.ToLowerInvariant();
 
-            if (path is not ($"/{nameof(PatchBookingRequest.Valida)}") || operation != "replace")
+            if (path is not "/valida" || operation != "replace")
             {
                 errors.Add($"Operación '{op.op}' no permitida en campo '{op.path}'. Solo 'replace' en 'Valida'.");
             }
