@@ -86,37 +86,6 @@ public class PatchBuildingEndpoint : IEndpoint
             return Error.Validation("JsonPatch", string.Join("; ", opErrors)).ToProblem();
         }
 
-        string[] propiedades = patchDoc.Operations
-            .Select(op => op.path!)
-            .Distinct()
-            .Select(p => p.TrimStart('/')
-                          .Split('/', StringSplitOptions.RemoveEmptyEntries)[0])
-            .Select(p => char.ToUpperInvariant(p[0]) + p.Substring(1))
-            .Distinct()
-            .ToArray();
-
-        Edificio patchRequest = new();
-        List<JsonPatchError> patchErrors = [];
-        patchDoc.ApplyTo(patchRequest, err => patchErrors.Add(err));
-        if (patchErrors.Count != 0)
-        {
-            return Error.Validation("ModelState", string.Join("; ", patchErrors.Select(e => e.ErrorMessage))).ToProblem();
-        }
-
-        ValidationResult validation = await validator.ValidateAsync(
-            patchRequest,
-            opts => opts.IncludeProperties(propiedades)
-        );
-
-        if (!validation.IsValid)
-        {
-            IEnumerable<string> msgs = validation.Errors.Select(e => e.ErrorMessage);
-            return Error.Validation(
-                string.Join(", ", validation.Errors.Select(e => e.PropertyName)),
-                string.Join("; ", msgs)
-            ).ToProblem();
-        }
-
         string payload = JsonConvert.SerializeObject(patchDoc);
         StringContent content = new(payload, Encoding.UTF8, "application/json-patch+json");
 
