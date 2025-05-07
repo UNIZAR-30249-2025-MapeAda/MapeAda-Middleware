@@ -81,7 +81,7 @@ public class LoginUserEndpoint: IEndpoint
             issuer: authConfiguration.Issuer,
             audience: authConfiguration.Audience,
             claims: claims,
-            expires: DateTime.Now.AddMinutes(30),
+            expires: DateTime.Now.AddDays(1),
             signingCredentials: credentials
         );
 
