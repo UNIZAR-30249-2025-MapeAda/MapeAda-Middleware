@@ -93,7 +93,7 @@ builder.Services.AddHttpClient(Constants.BackendHttpClientName, (serviceProvider
 {
     BackendConfiguration backendOptions = serviceProvider.GetRequiredService<IOptions<BackendConfiguration>>().Value;
 
-    client.BaseAddress = new Uri(backendOptions.BaseUrl);
+    client.BaseAddress = new Uri(backendOptions.BaseUrl ?? throw new InvalidOperationException("La URL base del backend no está configurada."));
 });
 
 builder.Services.ConfigureHttpJsonOptions(opts =>
